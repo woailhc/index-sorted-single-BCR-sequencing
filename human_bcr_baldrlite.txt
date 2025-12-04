@@ -1,0 +1,44 @@
+1. copy the desired fastq files to skyline:/data/vrc_vip/CAVD/internal  specified folder
+2. check the integrity of data set: all the desired cell's from specific plates are all copied
+[wuw5@ai-hpcsubmit1 CAVDC107C110_BCRVRC_Fastq_20250328_A]$ ls 250227_P03* | wc -l
+3. In /data/home/wuw5/test/C107_C110_longitude, which contains "BALDRlite" package and "00010_get_FastqFiles_List_WWW_new.py" to generate fastq list as ".txt"
+   [wuw5@ai-hpcsubmit1 C107_C110_longitude]$ python3 00010_get_FastqFiles_List_WWW_new.py
+4. Use excel to save the Fastq_list.txt as .csv
+5. Edit the sbatch job request "C101C110_baldrlite_250325.sh"
+[wuw5@ai-hpcsubmit1 C107_C110_longitude]$ cat C101C110_baldrlite_250325.sh
+#!/bin/bash
+#SBATCH --time=36:00:00
+
+module load nextflow
+nextflow \
+run BALDRlite/main.nf \
+--batch "835Cells" \
+--input "/data/home/wuw5/test/C107_C110_longitude/FastqFiles_List_250325.csv" \
+--output "/data/home/wuw5/test/C107_C110_longitude/result" \
+-w "/data/home/wuw5/test/C107_C110_longitude/inter" \
+--skip_qc false \
+--use_grid tr
+
+
+6. submit the sbatch job
+[wuw5@ai-hpcsubmit1 C107_C110_longitude]$ sbatch --time=8:00:00 C101C110_baldrlite_250325.sh
+
+7. [wuw5@ai-hpcsubmit1 C101_C107_C110_immcantation_250325]$ ls
+   C101_2850_cells_filtered.csv  C107_unique_2110_filtered.csv
+   C101_5584_cells_filtered.csv  C110_520_cells_filtered.csv
+
+   # use bash awk to merge the multiple csv
+   [wuw5@ai-hpcsubmit1 merge_csv_bash]$ awk 'NR==1 {print; next} FNR > 1' *.csv > awk_9919cells_baldrlite.csv
+8. Edit Run_ZZ_Immcantation_ww.sh and then run sbatch Run_ZZ_Immcantation_ww.sh
+   # the Run_ZZ_Immcantation.sh has to be in the same folder with the .fasta files
+9. Copy Immcantation output "combined_baldrlite_9919_cells_heavy_light_clone-pass.tsv" and
+  "combined_baldrlite_9919_cells_light_parse-select_ANNOT.tsv" to "add_flow_donor_info" folder
+10. update the plate info file
+   run python_filtered_cells_C101C107C110.py in Spyder to
+   a. remove all the VISC removed cells from final baldrlite_immcancation_flow_donor data set
+   b. count how many unique donors are in the final PBMC dataset
+   c. count each donor's sorted productive cells and VRC01 class cells.
+   d. count each donor's different timepoint's recovered productive cells and VRC01 class cells.
+11. remove the positive control contamination
+12. count the VRC01_class cell number
+13. Found a VRC01 class cell without sorter data
