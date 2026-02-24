@@ -1,0 +1,103 @@
+library(alakazam)
+library(ggplot2)
+library(shazam)
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+library(gganimate)
+library(gifski)
+
+
+source("/~/20250430_R_SHM_Plots/process_vrc01_excel.R")
+VRC01_df <- process_vrc01_excel("/~/20250422_C101_all_Shazam/VRC01/1791Cells_VRC01_Subjected_Sorted_Modified.xlsx")
+VRC01_df_light_plot <- VRC01_df$light
+VRC01_df_heavy_plot <- VRC01_df$heavy
+
+##only focus on the C101_High associated Subject_Sorted
+unique(VRC01_df_light_plot$Trial)
+#[1] "C101_Low"  "C101_High" "C110"      "C107"  
+dim(VRC01_df_light_plot)
+#[1] 1780   81
+dim(VRC01_df_heavy_plot)
+#[1] 1758   81
+VRC01_df_light_plot_high <- VRC01_df_light_plot %>%
+  filter(Trial != "C101_Low")
+VRC01_df_heavy_plot_high <- VRC01_df_heavy_plot %>%
+  filter(Trial != "C101_Low")
+
+# separate the clone_id into heavy and light
+VRC01_df_heavy_plot_high$clone_id_heavy <- sub("_.*$", "", VRC01_df_heavy_plot_high$clone_id)
+VRC01_df_light_plot_high$clone_id_heavy <- sub("^[^_]*_", "", VRC01_df_light_plot_high$clone_id)
+
+## group the data for gganimate
+VRC01_df_anim <- VRC01_df_heavy_plot_high %>%
+  group_by(Timepoint_Sorted, clone_id_heavy) %>%
+  summarise(
+    mu_freq_cdr3_r = mean(mu_freq_cdr3_r, na.rm = TRUE),
+    n_cells = n(),
+    .groups = 'drop'
+  )
+
+levels_time <- c("V08","V13","V22","V23","V27","V28","V29")
+
+VRC01_df_anim$Timepoint_Sorted <- factor(VRC01_df_anim$Timepoint_Sorted, levels = levels_time)
+# dim(VRC01_df_anim)
+#[1] 310   4
+VRC01_df_anim <- VRC01_df_anim %>%
+  filter(n_cells >= 4)
+dim(VRC01_df_anim)
+#[1] 117   4
+#some clone_id_heavy have one data Timepoint_Sorted
+#VRC01_df_anim_filtered <- VRC01_df_anim |>
+#  dplyr::group_by(clone_id_heavy) |>
+#  dplyr::filter(dplyr::n() > 1) |>
+#  dplyr::ungroup()
+
+p_anim <- ggplot(
+  VRC01_df_anim,
+  aes(
+    x = Timepoint_Sorted,              # <--- Use the original factor here!
+    y = mu_freq_cdr3_r,
+    size = n_cells/2,
+    group = clone_id_heavy,
+    color = clone_id_heavy
+  )
+) +
+  geom_point(alpha = 0.7) +
+  geom_path(alpha = 0.5, linetype = "dashed", linewidth = 0.6) +
+  scale_y_continuous(labels = label_percent(accuracy = 1)) +
+  scale_size_continuous(range = c(2, 20), trans = "sqrt") +
+  labs(
+    title = "VRC01 Heavy Chain CDR3 Replacement Mutation Frequency",
+    x = "Timepoint",                   # <--- This will now use your original names!
+    y = "Mutation frequency (%)",
+    size = "Clone Size",
+    color = "Clone ID"
+  ) +
+  theme_classic() +
+  theme(legend.position = "none") + 
+  transition_reveal(as.numeric(Timepoint_Sorted)) +  # animation still works by numeric order
+  ease_aes('linear')
+
+animate(
+  p_anim,
+  width = 800,
+  height = 450,
+  res = 100,
+  fps = 10,
+  renderer = av_renderer(mov_path,audio = FALSE)
+)
+gif_path <- "/~/20250430_R_SHM_Plots/animation_subject_cdr3_replacement_mu_4_cells.gif"
+anim_save(gif_path, p_anim, width = 800, height = 450, res = 100,renderer = gifski_renderer()  )
+
+
+# First, make sure you have the av package installed
+install.packages("av")  # if not already installed
+library(av)
+
+# Define the path for saving
+mov_path <- "/~/20250430_R_SHM_Plots/animation_subject_cdr3_replacement_mu_4_cells.mp4"
+
+# Create and save the animation
+
+
