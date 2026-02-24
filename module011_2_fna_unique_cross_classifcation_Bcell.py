@@ -27,14 +27,14 @@ def classify_group(
     g = group.copy()
 
     # Ensure required columns exist
-    for col in ["unique_within_fna", "cross_donor_fna", "cross_epitope_fna"]:
+    for col in ["unique_within_sample_type", "cross_donor_sample_type", "cross_epitope_sample_type"]:
         if col not in g.columns:
             g[col] = pd.Series("", index=g.index, dtype="string")
         else:
             g[col] = g[col].astype("string")
 
     # ---- Base masks -------------------------------------------------------
-    mask_100 = g[identity_col] == 100
+    mask_100 = g[identity_col] >= 99
     mask_global = g[global_col] > global_threshold
     mask_100_global = mask_100 & mask_global
 
